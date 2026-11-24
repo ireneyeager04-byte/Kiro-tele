@@ -16,13 +16,13 @@ jobs:
       - name: Checkout AKRAM TELE config
         uses: actions/checkout@v4
 
-      - name: Clone Telegram Android source (with submodules)
+      - name: Clone Telegram Android source with submodules
         run: |
           git clone --depth 1 --recurse-submodules --shallow-submodules https://github.com/TelegramMessenger/Telegram-Android.git Telegram
           cd Telegram
           git submodule update --init --recursive --depth=1
 
-      - name: Build official Android APKs using upstream Docker build environment
+      - name: Build using upstream Docker environment
         run: |
           cd Telegram
           docker build -t telegram-android-build .
@@ -32,6 +32,7 @@ jobs:
         run: |
           mkdir -p output
           find Telegram/TMessagesProj/build/outputs/apk -type f -name '*.apk' -exec cp {} output/ \;
+          test -n "$(find output -name '*.apk' -print -quit)"
           ls -lah output
 
       - name: Upload APKs
