@@ -60,7 +60,7 @@ jobs:
 
       - name: Validate AKRAM TELE source patches
         run: |
-          test -x scripts/apply-akram-overlay.sh
+          test -f scripts/apply-akram-overlay.sh
           bash -n scripts/apply-akram-overlay.sh
           test -d patches
           test -d overlay
