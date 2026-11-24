@@ -50,6 +50,11 @@ jobs:
           manifest.write_text(m)
           if 'android:supportsRtl="true"' not in m:
               raise SystemExit("RTL flag patch failed")
+          activity = '<activity android:name="org.telegram.ui.AkramLocalChatsActivity" android:exported="false" />'
+          alias = '''<activity-alias android:name="org.telegram.ui.AkramLocalChatsLauncher" android:targetActivity="org.telegram.ui.AkramLocalChatsActivity" android:label="محادثات AKRAM TELE" android:icon="@drawable/settings_chat" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter></activity-alias>'''
+          if "AkramLocalChatsActivity" not in m:
+              m = m.replace("</application>", activity + "\\n" + alias + "\\n</application>")
+              manifest.write_text(m)
           PY
           grep -q 'APP_PACKAGE=com.akram.tele' gradle.properties
           grep -q 'AppName">AKRAM TELE' TMessagesProj/src/main/res/values/strings.xml
