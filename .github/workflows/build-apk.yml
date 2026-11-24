@@ -1,4 +1,4 @@
-name: Build AKRAM TELE base APK
+name: Build AKRAM TELE independent APK
 
 on:
   workflow_dispatch:
@@ -13,44 +13,56 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
-      - name: Checkout AKRAM TELE config
+      - name: Checkout AKRAM TELE configuration
         uses: actions/checkout@v4
 
-      - name: Clone Telegram Android source with submodules
+      - name: Clone upstream Telegram Android with submodules
         run: |
           git clone --depth 1 --recurse-submodules --shallow-submodules https://github.com/TelegramMessenger/Telegram-Android.git Telegram
           cd Telegram
           git submodule update --init --recursive --depth=1
 
-      - name: Apply AKRAM TELE basic branding
+      - name: Apply AKRAM TELE identity and side-by-side package ID
         run: |
           cd Telegram
           python3 - <<'PY'
           from pathlib import Path
+
+          # Unique package identifier: does not replace official Telegram.
+          p = Path("gradle.properties")
+          s = p.read_text()
+          s = s.replace("APP_PACKAGE=org.telegram.messenger", "APP_PACKAGE=com.akram.tele")
+          if "APP_PACKAGE=com.akram.tele" not in s:
+              raise SystemExit("Failed to set independent package ID")
+          p.write_text(s)
+
+          # App name branding
           p = Path("TMessagesProj/src/main/res/values/strings.xml")
           s = p.read_text()
           s = s.replace('<string name="AppName">Telegram</string>', '<string name="AppName">AKRAM TELE</string>')
           s = s.replace('<string name="AppNameBeta">Telegram Beta</string>', '<string name="AppNameBeta">AKRAM TELE Beta</string>')
           p.write_text(s)
           PY
+          grep -q 'APP_PACKAGE=com.akram.tele' gradle.properties
+          grep -q 'AppName">AKRAM TELE' TMessagesProj/src/main/res/values/strings.xml
 
-      - name: Build using upstream Docker environment
+      - name: Build using upstream Docker build environment
         run: |
           cd Telegram
-          docker build -t telegram-android-build .
-          docker run --rm -v "$PWD":/home/source telegram-android-build
+          docker build -t akram-tele-android-builder .
+          docker run --rm -v "$PWD":/home/source akram-tele-android-builder
 
-      - name: Collect APK artifacts
+      - name: Collect APKs
         run: |
           mkdir -p output
           find Telegram/TMessagesProj/build/outputs/apk -type f -name '*.apk' -exec cp {} output/ \;
           test -n "$(find output -name '*.apk' -print -quit)"
           ls -lah output
 
-      - name: Upload APKs
+      - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: AKRAM-TELE-base-apks
+          name: AKRAM-TELE-independent-apks
           path: output/*.apk
           if-no-files-found: error
           retention-days: 7
