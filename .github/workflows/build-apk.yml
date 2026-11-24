@@ -118,6 +118,12 @@ jobs:
             adb shell pm list packages | grep 'com.akram.tele.web'
             adb shell monkey -p com.akram.tele.web 1
             sleep 10
-            adb shell pidof org.telegram.messenger || adb shell pidof com.akram.tele.web || true
-            adb logcat -d -t 3000 | grep -E 'FATAL EXCEPTION|AndroidRuntime' && exit 1 || true
+            if ! adb shell pidof com.akram.tele.web >/dev/null; then
+              echo "App process did not remain alive after launch."
+              exit 1
+            fi
+            if adb logcat -d -t 3000 | grep -E 'FATAL EXCEPTION|AndroidRuntime.*FATAL'; then
+              echo "Fatal crash found in emulator logs."
+              exit 1
+            fi
             echo "APK installed and launch smoke test completed."
