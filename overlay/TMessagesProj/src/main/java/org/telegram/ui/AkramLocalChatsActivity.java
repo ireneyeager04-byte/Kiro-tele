@@ -144,7 +144,23 @@ public class AkramLocalChatsActivity extends Activity {
         dlg.setOnShowListener(x->dlg.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{if(active[0])stopRecorder(true);if(recordingFile!=null&&recordingFile.exists()&&recordingFile.length()>0){JSONObject c=chats.optJSONObject(recordingChat);if(c!=null)addMessage(c,"أنا","",Uri.fromFile(recordingFile).toString(),recordingFile.getName(),"voice");}dlg.dismiss();}));
         dlg.show();dlg.getButton(AlertDialog.BUTTON_POSITIVE).setText("حفظ");
     }
-    private void stopRecorder(boolean keep){try{if(recorder!=null){if(keep)recorder.stop();recorder.reset();recorder.release();recorder=null;}}catch(Exception ignored){if(recorder!=null){try{recorder.release();}catch(Exception ignored2){}recorder=null;}}if(!keep&&recordingFile!=null)recordingFile.delete();}
+    private void stopRecorder(boolean keep) {
+        try {
+            if (recorder != null) {
+                if (keep) recorder.stop();
+                recorder.reset();
+                recorder.release();
+                recorder = null;
+            }
+        } catch (Exception ignored) {
+            if (recorder != null) {
+                try { recorder.release(); } catch (Exception ignored2) {}
+                recorder = null;
+            }
+            keep = false;
+        }
+        if (!keep && recordingFile != null) recordingFile.delete();
+    }
     @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] results){super.onRequestPermissionsResult(requestCode,permissions,results);if(requestCode==AUDIO_PERMISSION&&results.length>0&&results[0]==PackageManager.PERMISSION_GRANTED)voiceRecordDialog();else if(requestCode==AUDIO_PERMISSION)Toast.makeText(this,"إذن الميكروفون مطلوب للتسجيل",Toast.LENGTH_SHORT).show();}
     private void editMessages(int idx){
         JSONObject c=chats.optJSONObject(idx);JSONArray a=c==null?null:c.optJSONArray("messages");if(a==null||a.length()==0){Toast.makeText(this,"لا توجد رسائل لتعديلها",Toast.LENGTH_SHORT).show();return;}
