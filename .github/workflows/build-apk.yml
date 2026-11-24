@@ -55,7 +55,11 @@ jobs:
       - name: Collect APKs
         run: |
           mkdir -p output
-          find Telegram/TMessagesProj/build/outputs/apk -type f -name '*.apk' -exec cp {} output/ \;
+          find Telegram/TMessagesProj/build/outputs/apk -type f -name '*.apk' -print0 | while IFS= read -r -d '' f; do
+            rel="${f#Telegram/TMessagesProj/build/outputs/apk/}"
+            name="${rel//\//-}"
+            cp "$f" "output/$name"
+          done
           test -n "$(find output -name '*.apk' -print -quit)"
           ls -lah output
 
