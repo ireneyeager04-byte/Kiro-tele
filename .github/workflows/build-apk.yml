@@ -43,6 +43,26 @@ jobs:
           s = s.replace('<string name="AppNameBeta">Telegram Beta</string>', '<string name="AppNameBeta">AKRAM TELE Beta</string>')
           p.write_text(s)
 
+          # Add a launcher entry inside Telegram's main dialogs menu for local chats.
+          dialogs = Path("TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java")
+          d = dialogs.read_text()
+          marker = "AKRAM_LOCAL_CHATS_MENU_ENTRY"
+          insertion = """        // AKRAM_LOCAL_CHATS_MENU_ENTRY
+        ActionBarMenuItem akramLocalChatsItem = menu.addItem(991234, android.R.drawable.ic_menu_agenda);
+        akramLocalChatsItem.setOnClickListener(v -> {
+            Intent localChatsIntent = new Intent(getParentActivity(), AkramLocalChatsActivity.class);
+            getParentActivity().startActivity(localChatsIntent);
+        });
+"""
+          if marker not in d:
+              needle = "        ActionBarMenu menu = actionBar.createMenu();"
+              if needle not in d:
+                  raise SystemExit("DialogsActivity menu anchor not found")
+              d = d.replace(needle, needle + "\\n" + insertion, 1)
+              dialogs.write_text(d)
+          if marker not in dialogs.read_text():
+              raise SystemExit("AKRAM local chats menu patch failed")
+
           # Enable Android RTL support for Arabic-capable UI.
           manifest = Path("TMessagesProj/src/main/AndroidManifest.xml")
           m = manifest.read_text()
