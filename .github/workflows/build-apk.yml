@@ -46,6 +46,14 @@ jobs:
           grep -q 'APP_PACKAGE=com.akram.tele' gradle.properties
           grep -q 'AppName">AKRAM TELE' TMessagesProj/src/main/res/values/strings.xml
 
+          # Enable Android RTL support for Arabic-capable UI.
+          manifest = Path("TMessagesProj/src/main/AndroidManifest.xml")
+          m = manifest.read_text()
+          m = m.replace('android:supportsRtl="false"', 'android:supportsRtl="true"')
+          manifest.write_text(m)
+          if 'android:supportsRtl="true"' not in m:
+              raise SystemExit("RTL flag patch failed")
+
       - name: Apply persistent AKRAM TELE patches and overlays
         run: bash scripts/apply-akram-overlay.sh
 
