@@ -46,6 +46,9 @@ jobs:
           grep -q 'APP_PACKAGE=com.akram.tele' gradle.properties
           grep -q 'AppName">AKRAM TELE' TMessagesProj/src/main/res/values/strings.xml
 
+      - name: Apply persistent AKRAM TELE patches and overlays
+        run: bash scripts/apply-akram-overlay.sh
+
       - name: Build using upstream Docker build environment
         run: |
           cd Telegram
