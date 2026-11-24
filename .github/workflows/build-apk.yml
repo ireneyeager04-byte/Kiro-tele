@@ -22,6 +22,18 @@ jobs:
           cd Telegram
           git submodule update --init --recursive --depth=1
 
+      - name: Apply AKRAM TELE basic branding
+        run: |
+          cd Telegram
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("TMessagesProj/src/main/res/values/strings.xml")
+          s = p.read_text()
+          s = s.replace('<string name="AppName">Telegram</string>', '<string name="AppName">AKRAM TELE</string>')
+          s = s.replace('<string name="AppNameBeta">Telegram Beta</string>', '<string name="AppNameBeta">AKRAM TELE Beta</string>')
+          p.write_text(s)
+          PY
+
       - name: Build using upstream Docker environment
         run: |
           cd Telegram
