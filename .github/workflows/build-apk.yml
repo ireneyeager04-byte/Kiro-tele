@@ -58,7 +58,7 @@ jobs:
               needle = "        ActionBarMenu menu = actionBar.createMenu();"
               if needle not in d:
                   raise SystemExit("DialogsActivity menu anchor not found")
-              d = d.replace(needle, needle + "\\n" + insertion, 1)
+              d = d.replace(needle, needle + "\n" + insertion, 1)
               dialogs.write_text(d)
           if marker not in dialogs.read_text():
               raise SystemExit("AKRAM local chats menu patch failed")
