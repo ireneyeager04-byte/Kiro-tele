@@ -8,6 +8,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.media.MediaRecorder;
+import android.media.MediaPlayer;
 import android.graphics.Color;
 import android.view.Gravity;
 import android.view.View;
@@ -36,6 +37,7 @@ public class AkramLocalChatsActivity extends Activity {
     private JSONArray chats, channels;
     private int recordingChat = -1;
     private MediaRecorder recorder;
+    private MediaPlayer mediaPlayer;
     private File recordingFile;
 
     private int dp(float v) { return (int)(v * getResources().getDisplayMetrics().density + .5f); }
@@ -108,9 +110,24 @@ public class AkramLocalChatsActivity extends Activity {
         JSONObject chat=chats.optJSONObject(idx); if(chat==null)return;
         JSONArray msgs=chat.optJSONArray("messages"); if(msgs==null)msgs=new JSONArray();
         LinearLayout box=vertical(); box.setPadding(dp(8),dp(6),dp(8),dp(6));
-        ScrollView scroll=new ScrollView(this); TextView history=text("",15,0xff20252b); StringBuilder sb=new StringBuilder();
-        for(int i=0;i<msgs.length();i++){JSONObject m=msgs.optJSONObject(i);if(m!=null){sb.append(m.optString("sender","أنا")).append(" • ").append(m.optString("time","")).append("\n").append(m.optString("text",""));String att=m.optString("attachmentName","");if(!att.isEmpty())sb.append("\n📎 ").append(att);String uri=m.optString("attachmentUri","");if(!uri.isEmpty())sb.append("\n").append(uri);sb.append("\n\n");}}
-        history.setText(sb.length()==0?"لا توجد رسائل بعد":sb.toString()); scroll.addView(history); box.addView(scroll,new LinearLayout.LayoutParams(-1,dp(300)));
+        ScrollView scroll=new ScrollView(this); LinearLayout history=vertical();
+        for(int i=0;i<msgs.length();i++){
+            JSONObject m=msgs.optJSONObject(i); if(m==null)continue;
+            LinearLayout card=vertical(); card.setPadding(dp(8),dp(6),dp(8),dp(6)); card.setBackgroundColor(0xffeaf1f7);
+            String sender=m.optString("sender","أنا"), time=m.optString("time","");
+            String body=m.optString("text",""), att=m.optString("attachmentName",""), uri=m.optString("attachmentUri","");
+            card.addView(text(sender+" • "+time,12,0xff59636d));
+            if(!body.isEmpty())card.addView(text(body,16,0xff20252b));
+            if(!att.isEmpty()){
+                TextView attachment=button((m.optString("type","").equals("voice")?"▶ تشغيل صوت • ":"📎 فتح ملف • ")+att);
+                attachment.setOnClickListener(v->{if(m.optString("type","").equals("voice"))playVoice(uri);else openAttachment(uri,att);});
+                card.addView(attachment);
+            }
+            history.addView(card);
+            View divider=new View(this); divider.setBackgroundColor(0xffe4e8eb); history.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
+        }
+        if(msgs.length()==0)history.addView(text("لا توجد رسائل بعد",15,0xff20252b));
+        scroll.addView(history); box.addView(scroll,new LinearLayout.LayoutParams(-1,dp(300)));
         EditText sender=field("اسم المرسل", "أنا"), input=field("نص الرسالة",null); box.addView(sender); box.addView(input);
         LinearLayout tools=horizontal();
         TextView attach=button("📎 ملف"); attach.setOnClickListener(v->{recordingChat=idx;pickAttachment();}); tools.addView(attach,new LinearLayout.LayoutParams(0,-2,1));
@@ -120,6 +137,21 @@ public class AkramLocalChatsActivity extends Activity {
         new AlertDialog.Builder(this).setTitle(chat.optString("name")).setView(box).setNegativeButton("إغلاق",null).setPositiveButton("إرسال نص",(d,w)->{
             String value=input.getText().toString().trim();if(value.isEmpty()){Toast.makeText(this,"اكتب رسالة أولاً",Toast.LENGTH_SHORT).show();return;}addMessage(chat,sender.getText().toString(),value,null,null,"text");
         }).show();
+    }
+    private void openAttachment(String uri,String name){
+        try{Intent i=new Intent(Intent.ACTION_VIEW);i.setDataAndType(Uri.parse(uri),"*/*");i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);startActivity(i);}
+        catch(Exception e){Toast.makeText(this,"لا يوجد تطبيق يفتح هذا الملف",Toast.LENGTH_SHORT).show();}
+    }
+    private void playVoice(String uri){
+        try{
+            if(recorder!=null)stopRecorder(false);
+            if(mediaPlayer!=null){mediaPlayer.stop();mediaPlayer.release();mediaPlayer=null;}
+            mediaPlayer=new android.media.MediaPlayer();
+            mediaPlayer.setDataSource(this,Uri.parse(uri));
+            mediaPlayer.setOnCompletionListener(p->{p.release();if(mediaPlayer==p)mediaPlayer=null;});
+            mediaPlayer.setOnErrorListener((p,what,extra)->{p.release();if(mediaPlayer==p)mediaPlayer=null;Toast.makeText(this,"تعذر تشغيل التسجيل",Toast.LENGTH_SHORT).show();return true;});
+            mediaPlayer.prepare();mediaPlayer.start();
+        }catch(Exception e){if(mediaPlayer!=null){try{mediaPlayer.release();}catch(Exception ignored){}mediaPlayer=null;}Toast.makeText(this,"تعذر تشغيل الصوت",Toast.LENGTH_SHORT).show();}
     }
     private void addMessage(JSONObject chat,String sender,String body,String uri,String filename,String type){
         try{JSONArray arr=chat.optJSONArray("messages");if(arr==null)arr=new JSONArray();JSONObject m=new JSONObject();m.put("sender",sender==null||sender.trim().isEmpty()?"أنا":sender);m.put("text",body==null?"":body);m.put("time",now());m.put("attachmentUri",uri==null?"":uri);m.put("attachmentName",filename==null?"":filename);m.put("type",type==null?"text":type);arr.put(m);chat.put("messages",arr);chat.put("preview",body==null||body.isEmpty()?(filename==null?"رسالة صوتية":"📎 "+filename):body);save();refresh();Toast.makeText(this,"تم حفظ الرسالة محليًا",Toast.LENGTH_SHORT).show();}catch(Exception e){Toast.makeText(this,"تعذر حفظ الرسالة",Toast.LENGTH_SHORT).show();}
@@ -131,7 +163,7 @@ public class AkramLocalChatsActivity extends Activity {
     @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
         super.onActivityResult(requestCode,resultCode,data);
         if(requestCode==PICK_ATTACHMENT&&resultCode==RESULT_OK&&data!=null&&data.getData()!=null){
-            Uri u=data.getData();String name=u.getLastPathSegment();if(name==null)name=u.toString();JSONObject c=chats.optJSONObject(recordingChat);if(c!=null)addMessage(c,"أنا","",u.toString(),name,"file");
+            Uri u=data.getData();try{getContentResolver().takePersistableUriPermission(u,Intent.FLAG_GRANT_READ_URI_PERMISSION);}catch(Exception ignored){}String name=u.getLastPathSegment();if(name==null)name=u.toString();JSONObject c=chats.optJSONObject(recordingChat);if(c!=null)addMessage(c,"أنا","",u.toString(),name,"file");
         }
     }
     private void voiceRecordDialog(){
@@ -184,5 +216,5 @@ public class AkramLocalChatsActivity extends Activity {
         new AlertDialog.Builder(this).setTitle("الوسائط والمرفقات المحلية").setMessage(b.length()==0?"لم تحفظ مرفقات بعد":b.toString()).setPositiveButton("إغلاق",null).show();
     }
     private void save(){prefs.edit().putString("chats",chats.toString()).putString("channels",channels.toString()).apply();}
-    @Override protected void onDestroy(){stopRecorder(false);super.onDestroy();}
+    @Override protected void onDestroy(){stopRecorder(false);if(mediaPlayer!=null){try{mediaPlayer.stop();}catch(Exception ignored){}mediaPlayer.release();mediaPlayer=null;}super.onDestroy();}
 }
