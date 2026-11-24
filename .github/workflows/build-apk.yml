@@ -58,6 +58,14 @@ jobs:
       - name: Apply persistent AKRAM TELE patches and overlays
         run: bash scripts/apply-akram-overlay.sh
 
+      - name: Validate AKRAM TELE source patches
+        run: |
+          test -x scripts/apply-akram-overlay.sh
+          bash -n scripts/apply-akram-overlay.sh
+          test -d patches
+          test -d overlay
+          echo "Persistent patch/overlay scaffold validated."
+
       - name: Build using upstream Docker build environment
         run: |
           cd Telegram
